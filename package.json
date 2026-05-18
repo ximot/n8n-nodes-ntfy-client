@@ -1,0 +1,47 @@
+{
+  "name": "n8n-nodes-ntfy-client",
+  "version": "0.1.0",
+  "description": "n8n community nodes for ntfy — send and receive push notifications",
+  "keywords": ["n8n", "n8n-community-node-package", "ntfy", "notifications"],
+  "license": "MIT",
+  "author": {
+    "name": "Tomasz Wyderka",
+    "email": "tomaszwyderka@me.com"
+  },
+  "scripts": {
+    "build": "tsc && cp src/nodes/ntfy.svg dist/nodes/NtfySend/ && cp src/nodes/ntfy.svg dist/nodes/NtfyTrigger/",
+    "lint": "eslint src --ext .ts",
+    "lintfix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "files": ["dist"],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "nodes": [
+      "dist/nodes/NtfySend/NtfySend.node.js",
+      "dist/nodes/NtfyTrigger/NtfyTrigger.node.js"
+    ],
+    "credentials": [
+      "dist/credentials/NtfyApi.credentials.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "dependencies": {
+    "got": "^11.8.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.16.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.46.0",
+    "jest": "^29.5.0",
+    "n8n-workflow": "^2.21.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "~5.1.3"
+  }
+}
