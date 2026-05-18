@@ -21,6 +21,11 @@ describe('buildAuthHeader', () => {
     const creds: NtfyApiCredentials = { ...baseCreds, authType: 'basicAuth' };
     expect(buildAuthHeader(creds)).toEqual({ Authorization: 'Basic Og==' }); // base64(':')
   });
+
+  it('throws when accessToken is missing with authType accessToken', () => {
+    const creds: NtfyApiCredentials = { ...baseCreds, authType: 'accessToken' };
+    expect(() => buildAuthHeader(creds)).toThrow('accessToken is required when authType is "accessToken"');
+  });
 });
 
 describe('buildTopicUrl', () => {
@@ -34,6 +39,10 @@ describe('buildTopicUrl', () => {
 
   it('strips trailing slash from serverUrl', () => {
     expect(buildTopicUrl('https://ntfy.sh/', 'test')).toBe('https://ntfy.sh/test/json');
+  });
+
+  it('strips multiple trailing slashes from serverUrl', () => {
+    expect(buildTopicUrl('https://ntfy.sh//', 'test')).toBe('https://ntfy.sh/test/json');
   });
 });
 

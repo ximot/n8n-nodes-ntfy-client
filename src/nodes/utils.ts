@@ -12,13 +12,14 @@ export function buildAuthHeader(credentials: NtfyApiCredentials): Record<string,
     return { Authorization: `Basic ${encoded}` };
   }
   if (credentials.authType === 'accessToken') {
-    return { Authorization: `Bearer ${credentials.accessToken ?? ''}` };
+    if (!credentials.accessToken) throw new Error('accessToken is required when authType is "accessToken"');
+    return { Authorization: `Bearer ${credentials.accessToken}` };
   }
   return {};
 }
 
 export function buildTopicUrl(serverUrl: string, topics: string): string {
-  return `${serverUrl.replace(/\/$/, '')}/${topics}/json`;
+  return `${serverUrl.replace(/\/+$/, '')}/${topics}/json`;
 }
 
 export function buildSendHeaders(
