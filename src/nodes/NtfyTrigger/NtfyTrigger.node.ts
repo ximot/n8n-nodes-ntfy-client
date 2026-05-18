@@ -87,9 +87,18 @@ export class NtfyTrigger implements INodeType {
         if (!isClosed) setTimeout(startStream, 1000);
       });
 
-      activeStream.on('error', () => {
+      activeStream.on('error', (err: Error) => {
         if (isClosed) return;
-        if (retryCount >= MAX_RETRIES) return;
+
+        // Fail fast on auth errors — retrying won't help
+        const statusCode = (err as { response?: { statusCode?: number } }).response?.statusCode;
+        if (statusCode === 401 || statusCode === 403) {
+          throw new Error(`Ntfy Trigger: authentication failed (HTTP ${statusCode}). Check your credentials.`);
+        }
+
+        if (retryCount >= MAX_RETRIES) {
+          throw new Error(`Ntfy Trigger: connection to ${url} failed after ${MAX_RETRIES} retries. Last error: ${err.message}`);
+        }
         retryCount++;
         const delay = Math.pow(2, retryCount - 1) * 1000;
         setTimeout(startStream, delay);
