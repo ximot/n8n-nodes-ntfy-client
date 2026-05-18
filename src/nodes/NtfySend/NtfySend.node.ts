@@ -70,6 +70,36 @@ export class NtfySend implements INodeType {
         description: 'Comma-separated tags or emoji (e.g. "warning,📦")',
         placeholder: 'warning,📦',
       },
+      {
+        displayName: 'Additional Headers',
+        name: 'additionalHeaders',
+        type: 'fixedCollection',
+        typeOptions: { multipleValues: true },
+        default: {},
+        description: 'Extra ntfy headers (e.g. X-Markdown: true, X-Click, X-Attach)',
+        options: [
+          {
+            displayName: 'Header',
+            name: 'header',
+            values: [
+              {
+                displayName: 'Name',
+                name: 'name',
+                type: 'string',
+                default: '',
+                placeholder: 'X-Markdown',
+              },
+              {
+                displayName: 'Value',
+                name: 'value',
+                type: 'string',
+                default: '',
+                placeholder: 'true',
+              },
+            ],
+          },
+        ],
+      },
     ],
   };
 
@@ -87,8 +117,15 @@ export class NtfySend implements INodeType {
         const title = this.getNodeParameter('title', i) as string;
         const priority = this.getNodeParameter('priority', i) as string;
         const tags = this.getNodeParameter('tags', i) as string;
+        const additionalHeaders = this.getNodeParameter('additionalHeaders', i) as {
+          header?: Array<{ name: string; value: string }>;
+        };
 
         const headers = buildSendHeaders(credentials, { title, priority, tags });
+
+        for (const { name, value } of additionalHeaders.header ?? []) {
+          if (name) headers[name] = value;
+        }
 
         const response = await this.helpers.httpRequest({
           method: 'POST',
