@@ -60,7 +60,17 @@ After installing, create a new credential of type **Ntfy API**:
 | Username / Password | Shown when `Basic Auth` is selected |
 | Access Token | Shown when `Access Token` is selected |
 
-The credential is tested automatically against `GET /v1/health` when saved.
+### Connection test
+
+Click **Save & Test** after filling in the credential — n8n will validate it immediately:
+
+| Auth type | Test endpoint | What it verifies |
+|-----------|--------------|------------------|
+| `None` | `GET /v1/health` | Server is reachable |
+| `Basic Auth` | `GET /v1/account` | Username and password are accepted |
+| `Access Token` | `GET /v1/account` | Token is valid and not revoked |
+
+A green **Connection successful** means the credential is ready to use. A red **Authentication failed (HTTP 401/403)** means the password or token is wrong — fix it before activating any workflow that uses this credential.
 
 ## Requirements
 
