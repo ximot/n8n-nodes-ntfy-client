@@ -9,6 +9,8 @@ import {
 } from 'n8n-workflow';
 import { buildSendHeaders, NtfyApiCredentials } from '../utils';
 
+const VALID_HEADER_NAME = /^[A-Za-z0-9-]+$/;
+
 export class NtfySend implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Ntfy Send',
@@ -124,18 +126,26 @@ export class NtfySend implements INodeType {
         const headers = buildSendHeaders(credentials, { title, priority, tags });
 
         for (const { name, value } of additionalHeaders.header ?? []) {
-          if (name) headers[name] = value;
+          if (!name) continue;
+          if (!VALID_HEADER_NAME.test(name)) {
+            throw new NodeOperationError(
+              this.getNode(),
+              `Invalid header name: "${name}". Header names may only contain letters, digits, and hyphens.`,
+              { itemIndex: i },
+            );
+          }
+          headers[name] = value;
         }
 
         const response = await this.helpers.httpRequest({
           method: 'POST',
-          url: `${serverUrl}/${topic}`,
+          url: `${serverUrl}/${encodeURIComponent(topic)}`,
           headers,
           body: message,
         });
 
         returnData.push({
-          json: response as IDataObject,
+          json: (response !== null && typeof response === 'object' ? response : { response }) as IDataObject,
           pairedItem: { item: i },
         });
       } catch (error) {
