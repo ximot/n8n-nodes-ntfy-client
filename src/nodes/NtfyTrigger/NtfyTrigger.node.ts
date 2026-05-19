@@ -6,7 +6,7 @@ import {
   ITriggerResponse,
   NodeConnectionTypes,
 } from 'n8n-workflow';
-import got from 'got';
+import got, { RequestError } from 'got';
 import { buildAuthHeader, buildTopicUrl, parseStreamLine, NtfyApiCredentials } from '../utils';
 
 export class NtfyTrigger implements INodeType {
@@ -77,6 +77,8 @@ export class NtfyTrigger implements INodeType {
       let buffer = '';
 
       activeStream.on('data', (chunk: Buffer) => {
+        if (isClosed) return;
+
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
@@ -92,6 +94,7 @@ export class NtfyTrigger implements INodeType {
 
       activeStream.on('end', () => {
         if (!isClosed) {
+          clearTimeout(retryTimer);
           retryTimer = setTimeout(startStream, 1000);
         }
       });
@@ -100,7 +103,7 @@ export class NtfyTrigger implements INodeType {
         if (isClosed) return;
 
         // Fail fast on auth errors — retrying won't help
-        const statusCode = (err as { response?: { statusCode?: number } }).response?.statusCode;
+        const statusCode = err instanceof RequestError ? err.response?.statusCode : undefined;
         if (statusCode === 401 || statusCode === 403) {
           this.emitError(
             new Error(`Ntfy Trigger: authentication failed (HTTP ${statusCode}). Check your credentials.`),
@@ -118,6 +121,7 @@ export class NtfyTrigger implements INodeType {
         }
         retryCount++;
         const delay = Math.pow(2, retryCount - 1) * 1000;
+        clearTimeout(retryTimer);
         retryTimer = setTimeout(startStream, delay);
       });
     };
@@ -128,10 +132,12 @@ export class NtfyTrigger implements INodeType {
       closeFunction: async () => {
         isClosed = true;
         if (retryTimer !== undefined) clearTimeout(retryTimer);
+        retryTimer = undefined;
         if (activeStream) {
           activeStream.removeAllListeners();
           activeStream.destroy();
         }
+        activeStream = undefined;
       },
     };
   }
