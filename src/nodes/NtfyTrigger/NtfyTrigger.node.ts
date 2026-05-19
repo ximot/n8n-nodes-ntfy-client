@@ -51,15 +51,19 @@ export class NtfyTrigger implements INodeType {
     ],
   };
 
-  async testNtfyApiCredentials(
-    this: ICredentialTestFunctions,
-    credential: ICredentialsDecrypted,
-  ): Promise<INodeCredentialTestResult> {
-    return testNtfyConnection(
-      (opts) => this.helpers.request(opts),
-      credential.data as unknown as NtfyApiCredentials,
-    );
-  }
+  methods = {
+    credentialTest: {
+      async testNtfyApiCredentials(
+        this: ICredentialTestFunctions,
+        credential: ICredentialsDecrypted,
+      ): Promise<INodeCredentialTestResult> {
+        return testNtfyConnection(
+          (opts) => this.helpers.request(opts),
+          credential.data as unknown as NtfyApiCredentials,
+        );
+      },
+    },
+  };
 
   async trigger(this: ITriggerFunctions): Promise<ITriggerResponse | undefined> {
     const credentials = (await this.getCredentials('ntfyApi')) as NtfyApiCredentials;

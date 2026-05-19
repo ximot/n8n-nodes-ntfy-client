@@ -76,15 +76,19 @@ export class NtfySend implements INodeType {
     ],
   };
 
-  async testNtfyApiCredentials(
-    this: ICredentialTestFunctions,
-    credential: ICredentialsDecrypted,
-  ): Promise<INodeCredentialTestResult> {
-    return testNtfyConnection(
-      (opts) => this.helpers.request(opts),
-      credential.data as unknown as NtfyApiCredentials,
-    );
-  }
+  methods = {
+    credentialTest: {
+      async testNtfyApiCredentials(
+        this: ICredentialTestFunctions,
+        credential: ICredentialsDecrypted,
+      ): Promise<INodeCredentialTestResult> {
+        return testNtfyConnection(
+          (opts) => this.helpers.request(opts),
+          credential.data as unknown as NtfyApiCredentials,
+        );
+      },
+    },
+  };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
