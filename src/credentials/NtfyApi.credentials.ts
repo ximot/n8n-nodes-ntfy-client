@@ -1,5 +1,4 @@
 import {
-  ICredentialTestRequest,
   ICredentialType,
   INodeProperties,
 } from 'n8n-workflow';
@@ -56,11 +55,4 @@ export class NtfyApi implements ICredentialType {
     },
   ];
 
-  test: ICredentialTestRequest = {
-    request: {
-      baseURL: '={{$credentials.serverUrl}}',
-      url: '/v1/health',
-      method: 'GET',
-    },
-  };
 }

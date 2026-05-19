@@ -6,6 +6,37 @@ export interface NtfyApiCredentials {
   accessToken?: string;
 }
 
+export interface CredentialTestResult {
+  status: 'OK' | 'Error';
+  message: string;
+}
+
+export async function testNtfyConnection(
+  request: (options: object) => Promise<unknown>,
+  credentials: NtfyApiCredentials,
+): Promise<CredentialTestResult> {
+  const serverUrl = credentials.serverUrl.replace(/\/+$/, '');
+  // /v1/account requires authentication — returns 401/403 on bad creds
+  // /v1/health is auth-free — use only when no auth is configured
+  const endpoint = credentials.authType === 'none' ? '/v1/health' : '/v1/account';
+  const headers = buildAuthHeader(credentials);
+
+  try {
+    await request({ method: 'GET', uri: `${serverUrl}${endpoint}`, headers, json: true });
+    return { status: 'OK', message: 'Connection successful' };
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; response?: { statusCode?: number } };
+    const statusCode = err.statusCode ?? err.response?.statusCode;
+    if (statusCode === 401 || statusCode === 403) {
+      return {
+        status: 'Error',
+        message: `Authentication failed (HTTP ${statusCode}). Check your credentials.`,
+      };
+    }
+    return { status: 'Error', message: (error as Error).message };
+  }
+}
+
 export function buildAuthHeader(credentials: NtfyApiCredentials): Record<string, string> {
   if (credentials.authType === 'basicAuth') {
     const encoded = Buffer.from(`${credentials.username ?? ''}:${credentials.password ?? ''}`).toString('base64');
