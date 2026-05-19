@@ -1,13 +1,16 @@
 import {
+  ICredentialTestFunctions,
+  ICredentialsDecrypted,
   IDataObject,
   IExecuteFunctions,
+  INodeCredentialTestResult,
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
   NodeConnectionTypes,
   NodeOperationError,
 } from 'n8n-workflow';
-import { buildSendHeaders, NtfyApiCredentials } from '../utils';
+import { buildSendHeaders, testNtfyConnection, NtfyApiCredentials } from '../utils';
 
 export class NtfySend implements INodeType {
   description: INodeTypeDescription = {
@@ -21,7 +24,7 @@ export class NtfySend implements INodeType {
     defaults: { name: 'Ntfy Send' },
     inputs: [NodeConnectionTypes.Main],
     outputs: [NodeConnectionTypes.Main],
-    credentials: [{ name: 'ntfyApi', required: true }],
+    credentials: [{ name: 'ntfyApi', required: true, testedBy: 'testNtfyApiCredentials' }],
     properties: [
       {
         displayName: 'Topic',
@@ -71,6 +74,20 @@ export class NtfySend implements INodeType {
         placeholder: 'warning,📦',
       },
     ],
+  };
+
+  methods = {
+    credentialTest: {
+      async testNtfyApiCredentials(
+        this: ICredentialTestFunctions,
+        credential: ICredentialsDecrypted,
+      ): Promise<INodeCredentialTestResult> {
+        return testNtfyConnection(
+          (opts) => this.helpers.request(opts),
+          credential.data as unknown as NtfyApiCredentials,
+        );
+      },
+    },
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
