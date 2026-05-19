@@ -1,5 +1,8 @@
 import {
+  ICredentialTestFunctions,
+  ICredentialsDecrypted,
   IDataObject,
+  INodeCredentialTestResult,
   INodeType,
   INodeTypeDescription,
   ITriggerFunctions,
@@ -7,7 +10,7 @@ import {
   NodeConnectionTypes,
 } from 'n8n-workflow';
 import got, { RequestError } from 'got';
-import { buildAuthHeader, buildTopicUrl, parseStreamLine, NtfyApiCredentials } from '../utils';
+import { buildAuthHeader, buildTopicUrl, parseStreamLine, testNtfyConnection, NtfyApiCredentials } from '../utils';
 
 export class NtfyTrigger implements INodeType {
   description: INodeTypeDescription = {
@@ -21,7 +24,7 @@ export class NtfyTrigger implements INodeType {
     defaults: { name: 'Ntfy Trigger' },
     inputs: [],
     outputs: [NodeConnectionTypes.Main],
-    credentials: [{ name: 'ntfyApi', required: true }],
+    credentials: [{ name: 'ntfyApi', required: true, testedBy: 'testNtfyApiCredentials' }],
     properties: [
       {
         displayName: 'Topics',
@@ -47,6 +50,16 @@ export class NtfyTrigger implements INodeType {
       },
     ],
   };
+
+  async testNtfyApiCredentials(
+    this: ICredentialTestFunctions,
+    credential: ICredentialsDecrypted,
+  ): Promise<INodeCredentialTestResult> {
+    return testNtfyConnection(
+      (opts) => this.helpers.request(opts),
+      credential.data as unknown as NtfyApiCredentials,
+    );
+  }
 
   async trigger(this: ITriggerFunctions): Promise<ITriggerResponse | undefined> {
     const credentials = (await this.getCredentials('ntfyApi')) as NtfyApiCredentials;
