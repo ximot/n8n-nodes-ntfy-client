@@ -1,6 +1,6 @@
 # n8n-nodes-ntfy-client
 
-n8n community node package for [ntfy](https://ntfy.sh) — a simple HTTP-based pub-sub notification service. Supports self-hosted and public `ntfy.sh` servers.
+n8n community node package for [ntfy.sh](https://ntfy.sh) — a simple HTTP-based pub-sub notification service. Supports self-hosted and public ntfy.sh servers.
 
 ## Nodes
 

@@ -6,7 +6,7 @@ import {
   ITriggerResponse,
   NodeConnectionTypes,
 } from 'n8n-workflow';
-import got from 'got';
+import got, { RequestError } from 'got';
 import { buildAuthHeader, buildTopicUrl, parseStreamLine, NtfyApiCredentials } from '../utils';
 
 export class NtfyTrigger implements INodeType {
@@ -58,6 +58,7 @@ export class NtfyTrigger implements INodeType {
     const headers = buildAuthHeader(credentials);
 
     let activeStream: ReturnType<typeof got.stream> | undefined;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let retryCount = 0;
     const MAX_RETRIES = 5;
     let isClosed = false;
@@ -65,11 +66,19 @@ export class NtfyTrigger implements INodeType {
     const startStream = (): void => {
       if (isClosed) return;
 
+      // Tear down any previous stream before creating a new one
+      if (activeStream) {
+        activeStream.removeAllListeners();
+        activeStream.destroy();
+      }
+
       activeStream = got.stream(url, { headers, searchParams, retry: { limit: 0 } });
 
       let buffer = '';
 
       activeStream.on('data', (chunk: Buffer) => {
+        if (isClosed) return;
+
         buffer += chunk.toString();
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
@@ -84,24 +93,47 @@ export class NtfyTrigger implements INodeType {
       });
 
       activeStream.on('end', () => {
-        if (!isClosed) setTimeout(startStream, 1000);
+        if (!isClosed) {
+          retryCount = 0;
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(startStream, 1000);
+        }
       });
 
       activeStream.on('error', (err: Error) => {
         if (isClosed) return;
 
         // Fail fast on auth errors — retrying won't help
-        const statusCode = (err as { response?: { statusCode?: number } }).response?.statusCode;
+        const statusCode = err instanceof RequestError ? err.response?.statusCode : undefined;
         if (statusCode === 401 || statusCode === 403) {
-          throw new Error(`Ntfy Trigger: authentication failed (HTTP ${statusCode}). Check your credentials.`);
+          if (activeStream) {
+            activeStream.removeAllListeners();
+            activeStream.destroy();
+            activeStream = undefined;
+          }
+          this.emitError(
+            new Error(`Ntfy Trigger: authentication failed (HTTP ${statusCode}). Check your credentials.`),
+          );
+          return;
         }
 
         if (retryCount >= MAX_RETRIES) {
-          throw new Error(`Ntfy Trigger: connection to ${url} failed after ${MAX_RETRIES} retries. Last error: ${err.message}`);
+          if (activeStream) {
+            activeStream.removeAllListeners();
+            activeStream.destroy();
+            activeStream = undefined;
+          }
+          this.emitError(
+            new Error(
+              `Ntfy Trigger: connection to ${url} failed after ${MAX_RETRIES} retries. Last error: ${err.message}`,
+            ),
+          );
+          return;
         }
         retryCount++;
         const delay = Math.pow(2, retryCount - 1) * 1000;
-        setTimeout(startStream, delay);
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(startStream, delay);
       });
     };
 
@@ -110,7 +142,13 @@ export class NtfyTrigger implements INodeType {
     return {
       closeFunction: async () => {
         isClosed = true;
-        activeStream?.destroy();
+        if (retryTimer !== undefined) clearTimeout(retryTimer);
+        retryTimer = undefined;
+        if (activeStream) {
+          activeStream.removeAllListeners();
+          activeStream.destroy();
+        }
+        activeStream = undefined;
       },
     };
   }
