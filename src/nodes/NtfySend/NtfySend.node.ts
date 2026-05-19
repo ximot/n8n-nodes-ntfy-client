@@ -9,7 +9,7 @@ import {
 } from 'n8n-workflow';
 import { buildSendHeaders, NtfyApiCredentials } from '../utils';
 
-const VALID_HEADER_NAME = /^[A-Za-z0-9-]+$/;
+const VALID_HEADER_NAME = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
 
 export class NtfySend implements INodeType {
   description: INodeTypeDescription = {
@@ -156,6 +156,7 @@ export class NtfySend implements INodeType {
           });
           continue;
         }
+        if (error instanceof NodeOperationError) throw error;
         throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
       }
     }
