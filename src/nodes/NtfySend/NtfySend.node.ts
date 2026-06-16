@@ -12,6 +12,8 @@ import {
 } from 'n8n-workflow';
 import { buildSendHeaders, testNtfyConnection, NtfyApiCredentials } from '../utils';
 
+const VALID_HEADER_NAME = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
+
 export class NtfySend implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Ntfy Send',
@@ -73,6 +75,36 @@ export class NtfySend implements INodeType {
         description: 'Comma-separated tags or emoji (e.g. "warning,📦")',
         placeholder: 'warning,📦',
       },
+      {
+        displayName: 'Additional Headers',
+        name: 'additionalHeaders',
+        type: 'fixedCollection',
+        typeOptions: { multipleValues: true },
+        default: {},
+        description: 'Extra ntfy headers (e.g. X-Markdown: true, X-Click, X-Attach)',
+        options: [
+          {
+            displayName: 'Header',
+            name: 'header',
+            values: [
+              {
+                displayName: 'Name',
+                name: 'name',
+                type: 'string',
+                default: '',
+                placeholder: 'X-Markdown',
+              },
+              {
+                displayName: 'Value',
+                name: 'value',
+                type: 'string',
+                default: '',
+                placeholder: 'true',
+              },
+            ],
+          },
+        ],
+      },
     ],
   };
 
@@ -104,18 +136,33 @@ export class NtfySend implements INodeType {
         const title = this.getNodeParameter('title', i) as string;
         const priority = this.getNodeParameter('priority', i) as string;
         const tags = this.getNodeParameter('tags', i) as string;
+        const additionalHeaders = this.getNodeParameter('additionalHeaders', i) as {
+          header?: Array<{ name: string; value: string }>;
+        };
 
         const headers = buildSendHeaders(credentials, { title, priority, tags });
 
+        for (const { name, value } of additionalHeaders.header ?? []) {
+          if (!name) continue;
+          if (!VALID_HEADER_NAME.test(name)) {
+            throw new NodeOperationError(
+              this.getNode(),
+              `Invalid header name: "${name}". Header names may only contain letters, digits, and hyphens.`,
+              { itemIndex: i },
+            );
+          }
+          headers[name] = value;
+        }
+
         const response = await this.helpers.httpRequest({
           method: 'POST',
-          url: `${serverUrl}/${topic}`,
+          url: `${serverUrl}/${encodeURIComponent(topic)}`,
           headers,
           body: message,
         });
 
         returnData.push({
-          json: response as IDataObject,
+          json: (response !== null && typeof response === 'object' ? response : { response }) as IDataObject,
           pairedItem: { item: i },
         });
       } catch (error) {
@@ -126,6 +173,7 @@ export class NtfySend implements INodeType {
           });
           continue;
         }
+        if (error instanceof NodeOperationError) throw error;
         throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
       }
     }
