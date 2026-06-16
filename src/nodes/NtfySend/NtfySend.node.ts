@@ -10,9 +10,14 @@ import {
   NodeConnectionTypes,
   NodeOperationError,
 } from 'n8n-workflow';
-import { buildSendHeaders, testNtfyConnection, NtfyApiCredentials } from '../utils';
-
-const VALID_HEADER_NAME = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
+import {
+  buildSendHeaders,
+  testNtfyConnection,
+  buildAdditionalHeaders,
+  CUSTOM_HEADER_VALUE,
+  NtfyApiCredentials,
+  AdditionalHeaderEntry,
+} from '../utils';
 
 export class NtfySend implements INodeType {
   description: INodeTypeDescription = {
@@ -81,7 +86,7 @@ export class NtfySend implements INodeType {
         type: 'fixedCollection',
         typeOptions: { multipleValues: true },
         default: {},
-        description: 'Extra ntfy headers (e.g. X-Markdown: true, X-Click, X-Attach)',
+        description: 'Extra ntfy headers. Pick a common one or choose "Custom…" to enter any header.',
         options: [
           {
             displayName: 'Header',
@@ -90,16 +95,35 @@ export class NtfySend implements INodeType {
               {
                 displayName: 'Name',
                 name: 'name',
+                type: 'options',
+                default: 'X-Click',
+                description: 'Which ntfy header to set',
+                options: [
+                  { name: 'Click Action URL', value: 'X-Click', description: 'URL opened when the notification is tapped' },
+                  { name: 'Attachment URL', value: 'X-Attach', description: 'Attach a file or image by URL' },
+                  { name: 'Attachment Filename', value: 'X-Filename', description: 'Display name for the attachment' },
+                  { name: 'Icon URL', value: 'X-Icon', description: 'Custom notification icon URL' },
+                  { name: 'Format as Markdown', value: 'X-Markdown', description: 'Render the message as Markdown (set value to "true")' },
+                  { name: 'Delay / Schedule', value: 'X-Delay', description: 'Delay delivery, e.g. "30min", "tomorrow", "9am"' },
+                  { name: 'Custom…', value: CUSTOM_HEADER_VALUE, description: 'Enter any ntfy header name manually' },
+                ],
+              },
+              {
+                displayName: 'Custom Name',
+                name: 'customName',
                 type: 'string',
                 default: '',
-                placeholder: 'X-Markdown',
+                placeholder: 'X-Email',
+                description: 'Header name (e.g. X-Email, X-Call, X-Actions)',
+                displayOptions: { show: { name: [CUSTOM_HEADER_VALUE] } },
               },
               {
                 displayName: 'Value',
                 name: 'value',
                 type: 'string',
                 default: '',
-                placeholder: 'true',
+                placeholder: 'https://example.com',
+                description: 'Header value. Must be ASCII (see README).',
               },
             ],
           },
@@ -137,21 +161,15 @@ export class NtfySend implements INodeType {
         const priority = this.getNodeParameter('priority', i) as string;
         const tags = this.getNodeParameter('tags', i) as string;
         const additionalHeaders = this.getNodeParameter('additionalHeaders', i) as {
-          header?: Array<{ name: string; value: string }>;
+          header?: AdditionalHeaderEntry[];
         };
 
         const headers = buildSendHeaders(credentials, { title, priority, tags });
 
-        for (const { name, value } of additionalHeaders.header ?? []) {
-          if (!name) continue;
-          if (!VALID_HEADER_NAME.test(name)) {
-            throw new NodeOperationError(
-              this.getNode(),
-              `Invalid header name: "${name}". Header names may only contain letters, digits, and hyphens.`,
-              { itemIndex: i },
-            );
-          }
-          headers[name] = value;
+        try {
+          Object.assign(headers, buildAdditionalHeaders(additionalHeaders.header ?? []));
+        } catch (error) {
+          throw new NodeOperationError(this.getNode(), (error as Error).message, { itemIndex: i });
         }
 
         const response = await this.helpers.httpRequest({
