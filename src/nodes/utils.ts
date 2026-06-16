@@ -142,7 +142,7 @@ export function buildAdditionalHeaders(entries: AdditionalHeaderEntry[]): Record
     if (!name || !value) continue;
     if (!VALID_HEADER_NAME.test(name)) {
       throw new Error(
-        `Invalid header name: "${name}". Header names may only contain letters, digits, and hyphens.`,
+        `Invalid header name: "${name}". Header names must be RFC 7230 tokens (letters, digits, and !#$%&'*+-.^_\`|~).`,
       );
     }
     headers[name] = value;
