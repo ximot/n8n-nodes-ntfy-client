@@ -30,6 +30,8 @@ The **Additional Headers** field lets you set extra ntfy headers without knowing
 | `X-Email` | Forward the notification to an email address |
 | `X-Icon` | Custom notification icon URL |
 
+The **Name** dropdown offers the most common of these as ready-to-pick options; any header not listed (e.g. `X-Actions`, `X-Email`, `X-Call`) is still available via **Custom…**.
+
 Custom header names are validated as RFC 7230 tokens (letters, digits, and `` !#$%&'*+-.^_`|~ ``); an invalid name fails the node with a clear error. Entries with an empty name or empty value are skipped.
 
 > **Header values must be ASCII.** HTTP headers are transmitted as latin-1, so non-ASCII characters (accented letters like `ó`/`ł`, or emoji) in a *header value* — including the built-in `Title` / `Tags` fields and any Additional Header such as an `X-Actions` button label — may be shown as `?` or rejected by ntfy with `400 Bad Request`. The message **body** is sent as UTF-8 and is unaffected (so Polish text, emoji, etc. work fine in the message itself). To use non-ASCII in a header value, encode it as [RFC 2047](https://datatracker.ietf.org/doc/html/rfc2047), e.g. `=?UTF-8?B?T3R3w7NyeiBDb29saWZ5?=` renders as "Otwórz Coolify".
