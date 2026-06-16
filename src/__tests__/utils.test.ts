@@ -82,6 +82,12 @@ describe('buildSendHeaders', () => {
     const headers = buildSendHeaders(creds, {});
     expect(headers['Authorization']).toBe('Bearer tk_xyz');
   });
+
+  it('includes Authorization header when authType is basicAuth', () => {
+    const creds: NtfyApiCredentials = { ...baseCreds, authType: 'basicAuth', username: 'alice', password: 'secret' };
+    const headers = buildSendHeaders(creds, {});
+    expect(headers['Authorization']).toBe('Basic YWxpY2U6c2VjcmV0');
+  });
 });
 
 describe('parseStreamLine', () => {
@@ -104,5 +110,19 @@ describe('parseStreamLine', () => {
   it('returns null for malformed JSON', () => {
     expect(parseStreamLine('not json')).toBeNull();
     expect(parseStreamLine('{broken')).toBeNull();
+  });
+
+  it('returns null for JSON primitives (number, string)', () => {
+    expect(parseStreamLine('123')).toBeNull();
+    expect(parseStreamLine('"hello"')).toBeNull();
+  });
+
+  it('returns null for JSON arrays', () => {
+    expect(parseStreamLine('[]')).toBeNull();
+    expect(parseStreamLine('[1,2,3]')).toBeNull();
+  });
+
+  it('returns null for object without event field', () => {
+    expect(parseStreamLine('{"id":"abc","topic":"test"}')).toBeNull();
   });
 });
