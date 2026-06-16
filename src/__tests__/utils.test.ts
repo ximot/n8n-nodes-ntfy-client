@@ -1,4 +1,4 @@
-import { buildAuthHeader, buildTopicUrl, buildSendHeaders, parseStreamLine, NtfyApiCredentials } from '../nodes/utils';
+import { buildAuthHeader, buildTopicUrl, buildSendHeaders, parseStreamLine, testNtfyConnection, NtfyApiCredentials } from '../nodes/utils';
 
 const baseCreds: NtfyApiCredentials = { serverUrl: 'https://ntfy.sh', authType: 'none' };
 
@@ -87,6 +87,68 @@ describe('buildSendHeaders', () => {
     const creds: NtfyApiCredentials = { ...baseCreds, authType: 'basicAuth', username: 'alice', password: 'secret' };
     const headers = buildSendHeaders(creds, {});
     expect(headers['Authorization']).toBe('Basic YWxpY2U6c2VjcmV0');
+  });
+});
+
+describe('testNtfyConnection', () => {
+  it('authType none: checks /v1/health and reports reachable', async () => {
+    const request = jest.fn().mockResolvedValue({ healthy: true });
+    const res = await testNtfyConnection(request, { serverUrl: 'https://ntfy.sh', authType: 'none' });
+    expect(res.status).toBe('OK');
+    expect(request.mock.calls[0][0]).toMatchObject({ uri: 'https://ntfy.sh/v1/health' });
+  });
+
+  it('accessToken valid (authenticated account) -> OK', async () => {
+    const request = jest.fn().mockResolvedValue({ username: 'phil', role: 'user' });
+    const res = await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh', authType: 'accessToken', accessToken: 'tk_valid',
+    });
+    expect(res.status).toBe('OK');
+    expect(request.mock.calls[0][0]).toMatchObject({ uri: 'https://ntfy.sh/v1/account' });
+  });
+
+  it('credentials that resolve to anonymous -> Error (false-green guard)', async () => {
+    const request = jest.fn().mockResolvedValue({ username: '*', role: 'anonymous' });
+    const res = await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh', authType: 'accessToken', accessToken: 'tk_ignored',
+    });
+    expect(res.status).toBe('Error');
+    expect(res.message).toMatch(/anonymous/i);
+  });
+
+  it('empty accessToken -> Error without hitting the network', async () => {
+    const request = jest.fn();
+    const res = await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh', authType: 'accessToken', accessToken: '',
+    });
+    expect(res.status).toBe('Error');
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('basicAuth with missing password -> Error without hitting the network', async () => {
+    const request = jest.fn();
+    const res = await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh', authType: 'basicAuth', username: 'alice',
+    });
+    expect(res.status).toBe('Error');
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('401 from server -> Error mentioning the status code', async () => {
+    const request = jest.fn().mockRejectedValue({ statusCode: 401 });
+    const res = await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh', authType: 'accessToken', accessToken: 'tk_bad',
+    });
+    expect(res.status).toBe('Error');
+    expect(res.message).toMatch(/401/);
+  });
+
+  it('strips trailing slash from serverUrl in the request URL', async () => {
+    const request = jest.fn().mockResolvedValue({ username: 'phil', role: 'user' });
+    await testNtfyConnection(request, {
+      serverUrl: 'https://ntfy.sh/', authType: 'accessToken', accessToken: 'tk_v',
+    });
+    expect(request.mock.calls[0][0]).toMatchObject({ uri: 'https://ntfy.sh/v1/account' });
   });
 });
 
