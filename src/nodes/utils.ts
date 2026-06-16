@@ -16,14 +16,50 @@ export async function testNtfyConnection(
   credentials: NtfyApiCredentials,
 ): Promise<CredentialTestResult> {
   const serverUrl = credentials.serverUrl.replace(/\/+$/, '');
-  // /v1/account requires authentication — returns 401/403 on bad creds
-  // /v1/health is auth-free — use only when no auth is configured
-  const endpoint = credentials.authType === 'none' ? '/v1/health' : '/v1/account';
+
+  // No credentials: we can only verify the server is reachable. /v1/health is
+  // auth-free and always succeeds, so a green result here does NOT imply access
+  // to an auth-protected topic — be explicit about that.
+  if (credentials.authType === 'none') {
+    try {
+      await request({ method: 'GET', uri: `${serverUrl}/v1/health`, json: true });
+      return { status: 'OK', message: 'Server reachable (anonymous — no credentials configured)' };
+    } catch (error: unknown) {
+      return { status: 'Error', message: (error as Error).message };
+    }
+  }
+
+  // Fail empty credentials up front instead of sending an effectively anonymous request.
+  if (credentials.authType === 'accessToken' && !credentials.accessToken) {
+    return { status: 'Error', message: 'Access Token is empty — enter a token or switch Authentication Type to None.' };
+  }
+  if (credentials.authType === 'basicAuth' && (!credentials.username || !credentials.password)) {
+    return { status: 'Error', message: 'Username and password are both required for Basic Auth.' };
+  }
+
   const headers = buildAuthHeader(credentials);
 
   try {
-    await request({ method: 'GET', uri: `${serverUrl}${endpoint}`, headers, json: true });
-    return { status: 'OK', message: 'Connection successful' };
+    // /v1/account returns 200 even for anonymous requests (role "anonymous",
+    // username "*"), so a 200 alone is not proof of authentication. Inspect the
+    // returned identity: if the server treated us as anonymous, the credentials
+    // did not authenticate.
+    const account = (await request({
+      method: 'GET',
+      uri: `${serverUrl}/v1/account`,
+      headers,
+      json: true,
+    })) as { username?: string; role?: string } | undefined;
+
+    if (!account || account.role === 'anonymous' || account.username === '*') {
+      return {
+        status: 'Error',
+        message:
+          'Authentication did not succeed — the server treated the request as anonymous. Check your token or username/password.',
+      };
+    }
+
+    return { status: 'OK', message: `Connection successful (authenticated as ${account.username})` };
   } catch (error: unknown) {
     const err = error as { statusCode?: number; response?: { statusCode?: number } };
     const statusCode = err.statusCode ?? err.response?.statusCode;

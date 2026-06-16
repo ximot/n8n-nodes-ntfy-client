@@ -84,11 +84,13 @@ Click **Save & Test** after filling in the credential — n8n will validate it i
 
 | Auth type | Test endpoint | What it verifies |
 |-----------|--------------|------------------|
-| `None` | `GET /v1/health` | Server is reachable |
-| `Basic Auth` | `GET /v1/account` | Username and password are accepted |
-| `Access Token` | `GET /v1/account` | Token is valid and not revoked |
+| `None` | `GET /v1/health` | Server is reachable (anonymous) |
+| `Basic Auth` | `GET /v1/account` | Username and password actually authenticate a (non-anonymous) account |
+| `Access Token` | `GET /v1/account` | Token is valid, not revoked, and authenticates a (non-anonymous) account |
 
-A green **Connection successful** means the credential is ready to use. A red **Authentication failed (HTTP 401/403)** means the password or token is wrong — fix it before activating any workflow that uses this credential.
+A green result means the credential reached the server and — for `Basic Auth` / `Access Token` — authenticated a real account. A red result means the server is unreachable, the credentials are empty, or they were rejected / silently treated as anonymous.
+
+> **What the test does *not* check.** ntfy's `/v1/account` returns `200` even for anonymous requests, so the test verifies your **account/token**, not your **per-topic permissions** — the credential has no knowledge of the topic (that's set on the node). A green test does **not** guarantee you can publish to a specific auth-protected topic; that depends on the topic's access-control rules on the server. Likewise, `None` only confirms the server is up — it cannot validate access to a protected topic.
 
 ## Requirements
 
