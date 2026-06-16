@@ -117,6 +117,7 @@ export function parseStreamLine(line: string): Record<string, unknown> | null {
   }
 }
 
+// Persisted in saved workflows (as the dropdown option value) — do not change.
 export const CUSTOM_HEADER_VALUE = '__custom__';
 
 // RFC 7230 token: header names may contain letters, digits and these symbols.

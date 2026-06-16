@@ -15,11 +15,11 @@ Publishes a notification to an ntfy topic. Runs once per workflow execution.
 | Title | | Notification title |
 | Priority | | `Min (1)` / `Low (2)` / `Default (3)` / `High (4)` / `Urgent (5)` |
 | Tags | | Comma-separated tags or emoji (e.g. `warning,📦`) |
-| Additional Headers | | Extra ntfy headers as Name/Value pairs (e.g. `X-Markdown: true`, `X-Click`, `X-Attach`) |
+| Additional Headers | | Extra ntfy headers. Pick a common one from the dropdown (Click URL, Attachment, Icon, Markdown, Delay…) or choose **Custom…** to enter any header by name |
 
 #### Additional headers
 
-The **Additional Headers** field passes arbitrary ntfy headers straight to the publish request, unlocking the full ntfy feature set beyond the built-in fields:
+The **Additional Headers** field lets you set extra ntfy headers without knowing their exact names. Pick one from the **Name** dropdown (friendly labels for the most common ones) or choose **Custom…** to type any ntfy header name yourself, unlocking the full ntfy feature set beyond the built-in fields:
 
 | Header | Purpose |
 |--------|---------|
@@ -30,7 +30,7 @@ The **Additional Headers** field passes arbitrary ntfy headers straight to the p
 | `X-Email` | Forward the notification to an email address |
 | `X-Icon` | Custom notification icon URL |
 
-Header names are validated as RFC 7230 tokens (letters, digits, and `` !#$%&'*+-.^_`|~ ``); an invalid name fails the node with a clear error. Empty names are skipped.
+Custom header names are validated as RFC 7230 tokens (letters, digits, and `` !#$%&'*+-.^_`|~ ``); an invalid name fails the node with a clear error. Entries with an empty name or empty value are skipped.
 
 > **Header values must be ASCII.** HTTP headers are transmitted as latin-1, so non-ASCII characters (accented letters like `ó`/`ł`, or emoji) in a *header value* — including the built-in `Title` / `Tags` fields and any Additional Header such as an `X-Actions` button label — may be shown as `?` or rejected by ntfy with `400 Bad Request`. The message **body** is sent as UTF-8 and is unaffected (so Polish text, emoji, etc. work fine in the message itself). To use non-ASCII in a header value, encode it as [RFC 2047](https://datatracker.ietf.org/doc/html/rfc2047), e.g. `=?UTF-8?B?T3R3w7NyeiBDb29saWZ5?=` renders as "Otwórz Coolify".
 
