@@ -116,3 +116,36 @@ export function parseStreamLine(line: string): Record<string, unknown> | null {
     return null;
   }
 }
+
+export const CUSTOM_HEADER_VALUE = '__custom__';
+
+// RFC 7230 token: header names may contain letters, digits and these symbols.
+export const VALID_HEADER_NAME = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
+
+export interface AdditionalHeaderEntry {
+  name: string;
+  customName?: string;
+  value: string;
+}
+
+/**
+ * Resolves Additional Headers collection entries into a header map.
+ * - `name === CUSTOM_HEADER_VALUE` uses `customName`, otherwise `name` is the header.
+ * - Entries with an empty effective name or empty value are skipped.
+ * - Throws on an invalid header name (RFC 7230 token). On duplicates, the last wins.
+ */
+export function buildAdditionalHeaders(entries: AdditionalHeaderEntry[]): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const entry of entries) {
+    const name = (entry.name === CUSTOM_HEADER_VALUE ? entry.customName : entry.name)?.trim();
+    const value = entry.value?.trim();
+    if (!name || !value) continue;
+    if (!VALID_HEADER_NAME.test(name)) {
+      throw new Error(
+        `Invalid header name: "${name}". Header names may only contain letters, digits, and hyphens.`,
+      );
+    }
+    headers[name] = value;
+  }
+  return headers;
+}
