@@ -15,6 +15,22 @@ Publishes a notification to an ntfy topic. Runs once per workflow execution.
 | Title | | Notification title |
 | Priority | | `Min (1)` / `Low (2)` / `Default (3)` / `High (4)` / `Urgent (5)` |
 | Tags | | Comma-separated tags or emoji (e.g. `warning,📦`) |
+| Additional Headers | | Extra ntfy headers as Name/Value pairs (e.g. `X-Markdown: true`, `X-Click`, `X-Attach`) |
+
+#### Additional headers
+
+The **Additional Headers** field passes arbitrary ntfy headers straight to the publish request, unlocking the full ntfy feature set beyond the built-in fields:
+
+| Header | Purpose |
+|--------|---------|
+| `X-Markdown` | Render the message body as Markdown (set to `true`) |
+| `X-Click` | URL opened when the notification is tapped |
+| `X-Attach` | Attach a file or image by URL |
+| `X-Actions` | Add action buttons to the notification |
+| `X-Email` | Forward the notification to an email address |
+| `X-Icon` | Custom notification icon URL |
+
+Header names are validated as RFC 7230 tokens (letters, digits, and `` !#$%&'*+-.^_`|~ ``); an invalid name fails the node with a clear error. Empty names are skipped.
 
 ### Ntfy Trigger
 
@@ -75,6 +91,7 @@ A green **Connection successful** means the credential is ready to use. A red **
 ## Requirements
 
 - n8n `>=1.0.0`
+- Node.js `>=22`
 - ntfy server (self-hosted or public `ntfy.sh`)
 
 ## License
