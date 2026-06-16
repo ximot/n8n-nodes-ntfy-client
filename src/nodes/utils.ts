@@ -53,6 +53,8 @@ export function buildTopicUrl(serverUrl: string, topics: string): string {
   return `${serverUrl.replace(/\/+$/, '')}/${topics}/json`;
 }
 
+export const DEFAULT_PRIORITY = '3';
+
 export function buildSendHeaders(
   credentials: NtfyApiCredentials,
   { title, priority, tags }: { title?: string; priority?: string; tags?: string },
@@ -62,7 +64,7 @@ export function buildSendHeaders(
     ...buildAuthHeader(credentials),
   };
   if (title) headers['X-Title'] = title;
-  if (priority && priority !== '3') headers['X-Priority'] = priority;
+  if (priority && priority !== DEFAULT_PRIORITY) headers['X-Priority'] = priority;
   if (tags) headers['X-Tags'] = tags;
   return headers;
 }
@@ -70,8 +72,10 @@ export function buildSendHeaders(
 export function parseStreamLine(line: string): Record<string, unknown> | null {
   if (!line.trim()) return null;
   try {
-    const msg = JSON.parse(line) as Record<string, unknown>;
-    return msg.event === 'message' ? msg : null;
+    const msg = JSON.parse(line) as unknown;
+    if (msg === null || typeof msg !== 'object' || Array.isArray(msg)) return null;
+    const record = msg as Record<string, unknown>;
+    return record.event === 'message' ? record : null;
   } catch {
     return null;
   }
