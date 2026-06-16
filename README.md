@@ -32,6 +32,8 @@ The **Additional Headers** field passes arbitrary ntfy headers straight to the p
 
 Header names are validated as RFC 7230 tokens (letters, digits, and `` !#$%&'*+-.^_`|~ ``); an invalid name fails the node with a clear error. Empty names are skipped.
 
+> **Header values must be ASCII.** HTTP headers are transmitted as latin-1, so non-ASCII characters (accented letters like `ó`/`ł`, or emoji) in a *header value* — including the built-in `Title` / `Tags` fields and any Additional Header such as an `X-Actions` button label — may be shown as `?` or rejected by ntfy with `400 Bad Request`. The message **body** is sent as UTF-8 and is unaffected (so Polish text, emoji, etc. work fine in the message itself). To use non-ASCII in a header value, encode it as [RFC 2047](https://datatracker.ietf.org/doc/html/rfc2047), e.g. `=?UTF-8?B?T3R3w7NyeiBDb29saWZ5?=` renders as "Otwórz Coolify".
+
 ### Ntfy Trigger
 
 Subscribes to one or more ntfy topics using a persistent JSON stream. Triggers the workflow for each incoming message.
