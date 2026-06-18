@@ -1,4 +1,13 @@
-import { buildAuthHeader, buildTopicUrl, buildSendHeaders, parseStreamLine, testNtfyConnection, NtfyApiCredentials } from '../nodes/utils';
+import {
+  buildAuthHeader,
+  buildTopicUrl,
+  buildSendHeaders,
+  parseStreamLine,
+  testNtfyConnection,
+  buildAdditionalHeaders,
+  CUSTOM_HEADER_VALUE,
+  NtfyApiCredentials,
+} from '../nodes/utils';
 
 const baseCreds: NtfyApiCredentials = { serverUrl: 'https://ntfy.sh', authType: 'none' };
 
@@ -186,5 +195,52 @@ describe('parseStreamLine', () => {
 
   it('returns null for object without event field', () => {
     expect(parseStreamLine('{"id":"abc","topic":"test"}')).toBeNull();
+  });
+});
+
+describe('buildAdditionalHeaders', () => {
+  it('returns empty object for no entries', () => {
+    expect(buildAdditionalHeaders([])).toEqual({});
+  });
+
+  it('maps a predefined header 1:1', () => {
+    const headers = buildAdditionalHeaders([{ name: 'X-Click', value: 'https://example.com' }]);
+    expect(headers).toEqual({ 'X-Click': 'https://example.com' });
+  });
+
+  it('uses customName when name is the custom sentinel', () => {
+    const headers = buildAdditionalHeaders([
+      { name: CUSTOM_HEADER_VALUE, customName: 'X-Email', value: 'me@example.com' },
+    ]);
+    expect(headers).toEqual({ 'X-Email': 'me@example.com' });
+  });
+
+  it('skips a custom entry with an empty customName', () => {
+    expect(buildAdditionalHeaders([{ name: CUSTOM_HEADER_VALUE, customName: '', value: 'x' }])).toEqual({});
+  });
+
+  it('throws on an invalid custom header name', () => {
+    expect(() =>
+      buildAdditionalHeaders([{ name: CUSTOM_HEADER_VALUE, customName: 'X Bad', value: 'x' }]),
+    ).toThrow(/Invalid header name/);
+  });
+
+  it('skips an entry with an empty value', () => {
+    expect(buildAdditionalHeaders([{ name: 'X-Click', value: '' }])).toEqual({});
+  });
+
+  it('last duplicate wins', () => {
+    const headers = buildAdditionalHeaders([
+      { name: 'X-Click', value: 'https://first.example' },
+      { name: 'X-Click', value: 'https://second.example' },
+    ]);
+    expect(headers).toEqual({ 'X-Click': 'https://second.example' });
+  });
+
+  it('trims whitespace around name and value', () => {
+    const headers = buildAdditionalHeaders([
+      { name: CUSTOM_HEADER_VALUE, customName: '  X-Icon  ', value: '  https://i.example/x.png  ' },
+    ]);
+    expect(headers).toEqual({ 'X-Icon': 'https://i.example/x.png' });
   });
 });
