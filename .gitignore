@@ -5,3 +5,9 @@ dist/
 .env
 coverage/
 npm-debug.log*
+
+# Build artifacts
+*.tgz
+
+# Tooling
+.serena/
